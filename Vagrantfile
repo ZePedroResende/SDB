@@ -7,9 +7,13 @@ echo "DID IT"
 kubectl taint nodes --all node-role.kubernetes.io/master-
 echo "DID IT"
 kubectl create -f kubernetes/local-volumes.yaml
+sleep 10
 kubectl create -f kubernetes/postgres.yaml
+sleep 10
 kubectl create -f kubernetes/redis.yaml
+sleep 15
 kubectl create -f kubernetes/gitlab.yaml
+sleep 10
 kubectl get nodes
 kubectl get svc gitlab
 NORMAL_USER
@@ -67,5 +71,5 @@ Vagrant.configure("2") do |config|
   config.vm.provision "file", source: "./quickstart.sh", destination: "~/quickstart.sh"
   config.vm.provision "docker"
   config.vm.provision "shell", inline: $script
-#  config.vm.provision "shell", privileged: false, inline: $normal_user 
+  config.vm.provision "shell", privileged: false, inline: $normal_user 
 end

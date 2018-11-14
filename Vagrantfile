@@ -50,6 +50,12 @@ chown $(id -u vagrant):$(id -g vagrant) /home/vagrant/.kube/config
 docker pull gitlab/gitlab-ce:rc
 SCRIPT
 
+$init = <<-INIT
+sudo curl -L "https://github.com/docker/compose/releases/download/1.23.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+INIT
+
+
 Vagrant.configure("2") do |config|
   # Specify your hostname if you like
   # config.vm.hostname = "name"
@@ -61,11 +67,11 @@ Vagrant.configure("2") do |config|
   config.vm.network "private_network", ip: "10.0.0.101"
   config.vm.network "forwarded_port", guest: 30080, host: 30080
   config.vm.network "forwarded_port", guest: 30022, host: 30022
-  config.vm.provision "file", source: "~/.ssh/id_rsa.pub", destination: "~/.ssh/me.pub"
-  config.vm.provision "file", source: "./kubernetes", destination: "~/kubernetes"
-  config.vm.provision "file", source: "./quickdestroy.sh", destination: "~/quickdestroy.sh"
-  config.vm.provision "file", source: "./quickstart.sh", destination: "~/quickstart.sh"
   config.vm.provision "docker"
-  config.vm.provision "shell", inline: $script
-#  config.vm.provision "shell", privileged: false, inline: $normal_user 
+  config.vm.provision "file", source: "~/.ssh/id_rsa.pub", destination: "~/.ssh/me.pub"
+  config.vm.provision "file", source: "./docker-gitlab", destination: "~/dg"
+  config.vm.provision "shell", inline: $init
+  #config.vm.provision "file", source: "./kubernetes", destination: "~/kubernetes"
+  #config.vm.provision "file", source: "./quickdestroy.sh", destination: "~/quickdestroy.sh"
+  #config.vm.provision "file", source: "./quickstart.sh", destination: "~/quickstart.sh"
 end

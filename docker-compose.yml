@@ -7,13 +7,13 @@ services:
     command:
     - --loglevel warning
     volumes:
-    - /srv/docker/gitlab/redis:/var/lib/redis:Z
+    - ./srv/docker/gitlab/redis:/var/lib/redis:Z
 
   postgresql:
     restart: always
     image: sameersbn/postgresql:10
     volumes:
-    - /srv/docker/gitlab/postgresql:/var/lib/postgresql:Z
+    - ./srv/docker/gitlab/postgresql:/var/lib/postgresql:Z
     environment:
     - DB_USER=gitlab
     - DB_PASS=password
@@ -30,7 +30,7 @@ services:
     - "10080:80"
     - "10022:22"
     volumes:
-    - /srv/docker/gitlab/gitlab:/home/git/data:Z
+    - ./srv/docker/gitlab/gitlab:/home/git/data:Z
     environment:
     - DEBUG=false
 
@@ -49,8 +49,7 @@ services:
 
     - GITLAB_HTTPS=false
     - SSL_SELF_SIGNED=false
-
-    - GITLAB_HOST=localhost
+    - GITLAB_HOST='http://gitmydomain.com'
     - GITLAB_PORT=10080
     - GITLAB_SSH_PORT=10022
     - GITLAB_RELATIVE_URL_ROOT=

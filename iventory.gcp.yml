@@ -1,0 +1,16 @@
+plugin: gcp_compute
+projects:
+  - sdb-example
+zones:
+  - europe-west2-c
+filters:
+  # - machineType = n1-standard-1
+  # - name = rribeiro-*
+
+keyed_groups:
+  - prefix: ''
+    separator: ''
+    key: tags['items']
+
+auth_kind: serviceaccount
+service_account_file: ~/.gcloud/gcloud.json

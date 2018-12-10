@@ -1,0 +1,115 @@
+- name: Google Compute
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: no
+  vars:
+    gcp_zone: europe-west2-c
+    gcp_region: europe-west2
+    gcp_project: sdb-example
+    gcp_cred_kind: serviceaccount
+    gcp_cred_file: ~/.gcloud/gcloud.json
+    gcp_machine_type: f1-micro
+    source_image: projects/cos-cloud/global/images/cos-stable-65-10323-104-0
+    disk_size: 12
+    disks:
+      - disk-01
+      - disk-02
+      - disk-03
+    addresses:
+      - addr-01
+      - addr-02
+      - addr-03
+    instances:
+      - { index: 1, tag: app }
+      - { index: 2, tag: app }
+      - { index: 3, tag: app }
+
+  tasks:
+    - name: create a disk
+      gcp_compute_disk:
+        name: "{{ item }}"
+        size_gb: "{{ disk_size }}"
+        source_image: "{{ source_image }}"
+        zone: "{{ gcp_zone }}"
+        project: "{{ gcp_project }}"
+        auth_kind: "{{ gcp_cred_kind }}"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+      register: disk
+      loop: "{{ disks }}"
+
+    - name: create a network
+      gcp_compute_network:
+        name: "rribeiro-network"
+        project: "{{ gcp_project }}"
+        auth_kind: "{{ gcp_cred_kind }}"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+      register: network
+
+    - name: create a address
+      gcp_compute_address:
+        name: "{{ item }}"
+        region: "{{ gcp_region }}"
+        project: "{{ gcp_project }}"
+        auth_kind: "{{ gcp_cred_kind }}"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+      register: address
+      loop: "{{ addresses }}"
+
+    - name: create a firewall
+      gcp_compute_firewall:
+        name: "rribeiro-firewall"
+        allowed:
+          - ip_protocol: tcp
+            ports:
+              - 22
+          - ip_protocol: icmp
+        network: "global/networks/{{ network.name }}"
+        project: "{{ gcp_project }}"
+        auth_kind: "{{ gcp_cred_kind }}"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+
+    - name: create a instance
+      gcp_compute_instance:
+        name: "instance-{{ '%02d' | format(item.index) }}"
+        machine_type: "{{ gcp_machine_type }}"
+        disks:
+          - auto_delete: true
+            boot: true
+            source: "{{ disk.results[item.index - 1] }}"
+        metadata:
+          startup-script: |
+            #!/bin/bash
+            apt-get update -y
+            apt-get upgrade -y
+            apt-get install aptitude -y
+        tags:
+          items: "{{ item.tag }}"
+        network_interfaces:
+          - network: "{{ network }}"
+            access_configs:
+            - name: External NAT
+              nat_ip: "{{ address.results[item.index - 1] }}"
+              type: ONE_TO_ONE_NAT
+        zone: "{{ gcp_zone }}"
+        project: "{{ gcp_project }}"
+        auth_kind: "{{ gcp_cred_kind }}"
+        service_account_file: "{{ gcp_cred_file }}"
+        state: present
+      loop: "{{ instances }}"
+
+    # - name: Debug
+    #   debug:
+    #     msg: "{{ instance.networkInterfaces[0].accessConfigs[0].natIP }}"
+
+    # - name: wait for SSH for instances
+    #   wait_for:
+    #     delay: 10
+    #     host: "{{ instance.networkInterfaces[0].accessConfigs[0].natIP }}"
+    #     port: 22
+    #     state: started
+    #     timeout: 30

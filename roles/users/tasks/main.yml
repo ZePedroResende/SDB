@@ -1,0 +1,41 @@
+---
+
+
+
+- name: Include user variables
+  include_vars:
+    file: "{{ payload }}"
+  tags:
+    - users
+
+- name: Add users
+  user:
+    name: "{{ item.name }}"
+    shell: "{{ item.shell | default(omit) }}"
+    password: "{{ item.password | password_hash('sha512') }}"
+    update_password: on_create
+  with_items: "{{ users }}"
+  tags:
+    - users
+
+- name: Add user to groups
+  user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups | join(',') }}"
+    append: yes
+  with_items: "{{ users }}"
+  when: item.groups is defined
+  tags:
+    - users
+
+- name: Set authorized keys
+  authorized_key:
+    user: "{{ item.0.name }}"
+    key: "{{ item.1 }}"
+  with_subelements:
+    - "{{ users }}"
+    - keys
+  tags:
+    - users
+
+

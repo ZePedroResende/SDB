@@ -1,0 +1,55 @@
+---
+
+- name: sleep for a specified interval
+  command: sleep 120
+
+- name: Display all variables/facts known for a host
+  debug:
+    var: servers
+    verbosity: 4
+
+- name: Install PostgreSQL
+  apt:
+    name: ['postgresql', 'python-psycopg2']
+    state: latest
+  tags:
+    - db
+
+- name: Uncomment listen addresses configuration
+  replace:
+    path: "/etc/postgresql/{{ version }}/main/postgresql.conf"
+    regexp: '^#listen_addresses'
+    replace: listen_addresses
+  notify:
+    - restart postgresql
+  tags:
+    - db
+
+- name: Replace listen addresses
+  replace:
+    path: "/etc/postgresql/{{ version }}/main/postgresql.conf"
+    regexp: "^listen_addresses\\s+=\\s+'(.*)'"
+    replace: "listen_addresses = '{{ addresses }}'"
+  notify:
+    - restart postgresql
+  when: addresses is defined
+  tags:
+    - db
+
+- name: Add pg_hba.conf line to permit access from network
+  template:
+    src: pg_hba.conf.j2
+    dest: "/etc/postgresql/{{ version }}/main/pg_hba.conf"
+  notify:
+    - restart postgresql
+  when: addresses is defined
+  tags:
+    - db
+
+- name: Ensure service is enabled and started
+  service:
+    name: postgresql
+    state: restarted
+    enabled: yes
+  tags:
+    - db

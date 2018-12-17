@@ -1,0 +1,48 @@
+global
+    log 127.0.0.1 local0 notice
+    maxconn 60000
+    user haproxy
+    group haproxy
+
+defaults
+    log     global
+    mode    http
+    option  httplog
+    option  dontlognull
+    retries 3
+    option redispatch
+    timeout connect  5000
+    timeout client  10000
+    timeout server  10000
+
+listen gitlab-web
+    bind 0.0.0.0:80
+    mode http
+    stats enable
+    stats uri /haproxy?stats
+    stats realm Strictly\ Private
+    stats auth A_Username:YourPassword
+    stats auth Another_User:passwd
+    balance roundrobin
+    option httpclose
+    option forwardfor
+    cookie SRVNAME insert
+    {% for item in servers %}
+    server {{item}} {{item}}:10080 cookie {{item}} check	
+    {% endfor %}
+
+listen gitlab-git
+    bind 0.0.0.0:8022
+    mode http
+    stats enable
+    stats uri /haproxy?stats
+    stats realm Strictly\ Private
+    stats auth A_Username:YourPassword
+    stats auth Another_User:passwd
+    balance roundrobin
+    option httpclose
+    option forwardfor
+    cookie SRVNAME insert
+    {% for item in servers %}
+    server {{item}} {{item}}:10022 cookie {{item}} check	
+    {% endfor %}

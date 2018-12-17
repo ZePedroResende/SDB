@@ -1,0 +1,15 @@
+[uwsgi]
+chdir={{ app.root }}
+module=app:app
+pidfile=tmp/app.pid
+master=True
+cheap=True
+workers=2
+gevent=100
+vacuum=True
+max-requests=3000
+socket=0.0.0.0:5000
+#chmod-socket=660
+#chown-socket=ravage
+logto=logs/uwsgi.log
+virtualenv={{ app.root }}/.venv

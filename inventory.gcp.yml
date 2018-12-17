@@ -1,8 +1,8 @@
 plugin: gcp_compute
 projects:
-  - sdb-example
+  - testes-222509
 zones:
-  - europe-west2-c
+  - us-east1-b
 filters:
   # - machineType = n1-standard-1
   # - name = rribeiro-*
@@ -13,4 +13,4 @@ keyed_groups:
     key: tags['items']
 
 auth_kind: serviceaccount
-service_account_file: ~/.gcloud/gcloud.json
+service_account_file: credentials.json

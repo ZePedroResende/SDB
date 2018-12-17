@@ -1,0 +1,28 @@
+---
+
+- name: install load balancer
+  apt:
+          name: haproxy
+          state: latest
+
+- name: activate load balancer
+  lineinfile:
+          create: yes
+          path: /etc/default/haproxy
+          state: present
+          line: ENABLED=1
+
+- name: create necessary folder
+  file:
+          path: /run/haproxy/
+          state: directory
+
+- name: create configurations file
+  template: 
+      src: haproxy.cfg.j2
+      dest: /etc/haproxy/haproxy.cfg
+
+- name: restart haproxy
+  service:
+    name: haproxy
+    state: restarted

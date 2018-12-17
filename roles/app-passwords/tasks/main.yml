@@ -1,0 +1,108 @@
+---
+
+- name: Include user variables
+  include_vars:
+    file: "{{ payload }}"
+  tags:
+    - app
+
+- name: Install system packages
+  apt:
+    name:
+      - virtualenv
+      - build-essential
+      - python-dev
+      - git
+      - postgresql-client
+    state: latest
+  tags:
+    - app
+
+- name: Initial setup
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: deployer
+    group: deployer
+    mode: 0775
+  with_items:
+    - /srv/apps
+  tags:
+    - app
+
+- name: Clone repository
+  become_user: "{{ app.username }}"
+  git:
+    repo: "{{ app.repository }}"
+    dest: "{{ app.root }}"
+    version: "{{ app.version }}"
+  tags:
+    - app
+
+- name: Missing directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: deployer
+    group: deployer
+    mode: 0775
+  with_items:
+    - "{{ app.root }}/tmp"
+    - "{{ app.root }}/logs"
+  tags:
+    - app
+
+- name: Copy production configuration
+  template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: "{{ app.username }}"
+    group: "{{ app.username }}"
+    mode: 0750
+  with_items:
+    - { src: env.j2, dest: "{{ app.root }}/.env" }
+    - { src: uwsgi.ini.j2, dest: "{{ app.root }}/uwsgi.ini" }
+  tags:
+    - app
+
+- name: Setup Python virtual environment
+  become_user: "{{ app.username }}"
+  shell: virtualenv --no-site-packages .venv >> .virtualenv.lock
+  args:
+    chdir: "{{ app.root }}"
+    creates: .virtualenv.lock
+  tags:
+    - app
+
+- name: Install application dependencies
+  become_user: "{{ app.username }}"
+  pip:
+    requirements: "{{ app.root }}/requirements.txt"
+    virtualenv: "{{ app.root }}/.venv"
+  tags:
+    - app
+
+
+- name: Import database schema
+  become_user: "{{ app.username }}"
+  shell: "psql postgresql://{{ app.db.user }}:{{ app.db.password }}@{{ hostvars[groups['database'][0]]['ansible_%s' | format(ansible_interfaces[0])].ipv4.address}}/{{ app.db.name }} < support/schema.sql"
+  args:
+    chdir: "{{ app.root }}"
+    creates: .schema.lock
+  tags:
+    - app
+
+- name: Copy systemctl script
+  template:
+    src: "{{ app.name }}.service.j2"
+    dest: "/etc/systemd/system/{{ app.name }}.service"
+  tags:
+    - app
+
+- name: Start and enable application service
+  service:
+    name: "{{ app.name }}"
+    state: restarted
+    enabled: yes
+  tags:
+    - app

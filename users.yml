@@ -1,0 +1,10 @@
+---
+
+users:
+  - name: deployer
+    shell: /bin/bash
+    password: '123456' #"{{ lookup('passwordstore', 'ansible/uc/deployer create=true length=8') }}"
+    groups:
+      - sudo
+    keys:
+      - "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"

@@ -8,7 +8,7 @@
       vars:
         gcp_zone: us-east1-b
         gcp_region: us-east1
-        gcp_project: testes-222509
+        gcp_project: semiotic-quasar-221110
         gcp_cred_kind: serviceaccount
         gcp_cred_file: credentials.json
         gcp_machine_type: n1-standard-1

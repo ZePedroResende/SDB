@@ -61,12 +61,6 @@
             line='bind 0.0.0.0'
             state=present
 
-- name: No protect mode
-  lineinfile: dest=/etc/redis/redis.conf
-            regexp='protected-mode yes'
-            line='protected-mode no'
-            state=present
-
 - name: configure logging
   lineinfile: dest=/etc/redis/redis.conf
             regexp='^logfile ""$'

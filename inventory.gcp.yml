@@ -1,6 +1,6 @@
 plugin: gcp_compute
 projects:
-  - testes-222509
+  - semiotic-quasar-221110
 zones:
   - us-east1-b
 filters:

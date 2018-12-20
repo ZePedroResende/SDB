@@ -108,8 +108,6 @@
   become: yes
   roles:
     - {role: lb,
-       servers:  "{{ groups['app'] }}",
-       }
-    - {role: lb,
-       servers:  "{{ groups['app2'] }}",
+       servers: ["{{hostvars[groups['app'][0]]['ansible_%s' | format(ansible_interfaces[0])].ipv4.address}}", 
+                "{{hostvars[groups['app'][0]]['ansible_%s' | format(ansible_interfaces[0])].ipv4.address}}"]
        }

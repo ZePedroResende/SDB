@@ -41,8 +41,6 @@
           - 80
           - 10022
           - 10080
-          - 6379
-          - 5432
           - 9200
           - 9300
           - 5601
@@ -59,8 +57,10 @@
     allowed:
       - ip_protocol: tcp
         ports:
-          - 6379
+          - 6380
           - 5432
+          - 10022
+          - 10080
     source_ranges:
       - 10.128.0.0/9
     network: "global/networks/{{ network.name }}"

@@ -51,14 +51,14 @@
           - DEBUG=false
 
           - DB_ADAPTER=postgresql
-          - DB_HOST={{  postgres[0] }}
+          - DB_HOST= {{ hostvars[postgres[0]]['ansible_%s' | format(ansible_interfaces[0])].ipv4.address }}
           - DB_PORT=5432
           - DB_USER=gitlab
           - DB_PASS=password
           - DB_NAME=gitlabhq_production
 
-          - REDIS_HOST={{ redis[0] }}
-          - REDIS_PORT=6379
+          - REDIS_HOST={{ hostvars[redis[0]]['ansible_%s' | format(ansible_interfaces[0])].ipv4.address }}
+          - REDIS_PORT=6380
 
           - TZ=Asia/Kolkata
           - GITLAB_TIMEZONE=Kolkata

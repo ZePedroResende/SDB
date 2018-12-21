@@ -96,7 +96,7 @@
   become: yes  
   roles:
     - { role: docker,
-      app: "{{ ansible_default_ipv4.address }}",
+      app: "{{ inventory_hostname }}",
       postgres: "{{ groups['database'] }}",
       redis: "{{ groups['redis'] }}",
       }

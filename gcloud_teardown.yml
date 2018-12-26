@@ -1,0 +1,35 @@
+- name: GCP Teardown
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Debug
+      debug:
+        msg: "{{ hostvars[item] }}"
+      loop: "{{ groups['all'] }}"
+
+    - name: Teardown instances
+      gcp_compute_instance:
+        name: "{{ hostvars[item].name }}"
+        zone: "{{ hostvars[item].zone }}"
+        project: "{{ hostvars[item].project }}"
+        auth_kind: "serviceaccount"
+        service_account_file: "credentials.json"
+        state: absent
+      loop: "{{ groups['all'] }}"
+
+    - name: Delete IP addresses
+      gcp_compute_address:
+        name: "{{ item }}"
+        region: "us-east1"
+        project: "semiotic-quasar-221110"
+        auth_kind: "serviceaccount"
+        service_account_file: "credentials.json"
+        state: absent
+      loop:
+        - addr-01
+        - addr-02
+        - addr-03
+        - addr-04
+        - addr-05
+        - addr-06

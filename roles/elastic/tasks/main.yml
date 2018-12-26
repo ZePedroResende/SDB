@@ -1,0 +1,67 @@
+---
+
+- name: install required software
+  apt:
+    name: ['apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common']
+    state: latest
+
+- name: add docker repo key
+  apt_key: 
+    url: https://download.docker.com/linux/ubuntu/gpg
+    id: 0EBFCD88
+    state: present
+
+- name: add docker repository
+  apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+    state: present
+
+- name: install required software
+  apt:
+    name: ['python-pip','docker-ce']
+    state: latest
+
+- name: normal user permitions
+  command: usermod -aG docker ${USER}
+
+- name: download and install docker-compose
+  get_url: 
+        url: https://github.com/docker/compose/releases/download/1.23.1/docker-compose-linux-x86_64 
+        dest: /usr/local/bin/docker-compose
+        mode: u+x
+
+- name: install docker-py for ansible docker modules
+  command: pip install docker docker-compose
+
+- name: pull elastic search docker image
+  docker_image:
+    name: docker.elastic.co/elasticsearch/elasticsearch-oss
+    tag: 6.1.1
+    pull: yes
+
+- name: pull kibana docker image
+  docker_image:
+    name: docker.elastic.co/kibana/kibana-oss
+    tag: 6.1.1
+    pull: yes
+
+- name: increase memory capacity
+  command: sysctl -w vm.max_map_count=262144
+
+- name: run elastic_search 
+  docker_container:
+    name: e_search
+    published_ports:
+      - 9200:9200
+      - 9300:9300 
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:6.1.1
+
+- name: run kibana
+  docker_container: 
+    name: kibana
+    published_ports:
+      - 80:5601
+    image: docker.elastic.co/kibana/kibana-oss:6.1.1
+    links:
+      - e_search:elasticsearch
+

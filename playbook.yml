@@ -1,0 +1,113 @@
+---
+
+- hosts: localhost
+  connection: local
+  gather_facts: no
+  roles:
+    - role: gcp
+      vars:
+        gcp_zone: us-east1-b
+        gcp_region: us-east1
+        gcp_project: semiotic-quasar-221110
+        gcp_cred_kind: serviceaccount
+        gcp_cred_file: credentials.json
+        gcp_machine_type: n1-standard-1
+        source_image: projects/ubuntu-os-cloud/global/images/ubuntu-1604-xenial-v20181030
+        disk_size: 12
+        disks:
+          - disk-01
+          - disk-02
+          - disk-03
+          - disk-04
+          - disk-05
+          - disk-06
+        addresses:
+          - addr-01
+          - addr-02
+          - addr-03
+          - addr-04
+          - addr-05
+          - addr-06
+        instances:
+          - { index: 1, tag: app }
+          - { index: 2, tag: database }
+          - { index: 3, tag: redis }
+          - { index: 4, tag: elastic }
+          - { index: 5, tag: lb }
+          - { index: 6, tag: app2 }
+
+- hosts: all
+  become: yes
+  roles:
+    - { role: users, payload: users.yml }
+
+- hosts: elastic
+  become: yes
+  roles: 
+    - {role: elastic}
+
+- hosts: database
+  become: yes
+  vars: 
+    my_pattern: 'app*'
+  roles:
+    - { role: db-postgresql, 
+        addresses: '*', 
+        version: '9.5',
+        servers:  "{%- set tmp = [] -%}
+                  {%- for elem in groups | map('match', my_pattern) | list -%}
+                    {%- if elem -%}
+                      {{ tmp.append(groups[loop.index - 1]) }}
+                    {%- endif -%}
+                  {%- endfor -%}
+                  {{ tmp }}"
+      }
+    - { role: postgresql-db, dbname: 'gitlabhq_production' }
+    - {
+      role: postgresql-user,
+      username: 'gitlab',
+      password: 'password', #"{{ lookup('passwordstore','ansible/uc/db create=true length=8') }}",
+      dbname: 'gitlabhq_production'
+      }
+    - { role: beats,
+        elastic_host: "{{ groups['elastic'][0] }}"
+      }
+
+- hosts: redis
+  become: yes
+  roles: 
+    - {role: redis,
+      ipv4_addr: 127.0.0.1,
+      redis_user: redis,
+      redis_group: redis,
+      redis_bind_addr: 0.0.0.0,
+      redis_port: 6379,
+      redis_tcp_sockets: 511,
+      redis_socket: /var/run/redis/redis.sock,
+      redis_socket_permissions: 770,
+      redis_logfile: /var/log/redis/redis-server.log
+      }
+    - { role: beats,
+        elastic_host: "{{ groups['elastic'][0] }}"
+      }
+
+
+- hosts: app*
+  become: yes  
+  roles:
+    - { role: docker,
+      app: "{{ inventory_hostname }}",
+      postgres: "{{ groups['database'] }}",
+      redis: "{{ groups['redis'] }}",
+      }
+    - { role: beats,
+        elastic_host: "{{ groups['elastic'][0] }}"
+      }
+
+- hosts: lb
+  become: yes
+  roles:
+    - {role: lb,
+       servers: ["{{hostvars[groups['app'][0]]['ansible_%s' | format(ansible_interfaces[0])].ipv4.address}}", 
+                "{{hostvars[groups['app'][0]]['ansible_%s' | format(ansible_interfaces[0])].ipv4.address}}"]
+       }

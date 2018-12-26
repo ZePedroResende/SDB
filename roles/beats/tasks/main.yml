@@ -1,0 +1,33 @@
+---
+
+- name: download public key for elastic repo
+  shell: curl https://artifacts.elastic.co/GPG-KEY-elasticsearch | sudo apt-key add -
+
+- name: add repo definition
+  shell: echo "deb https://artifacts.elastic.co/packages/6.x/apt stable main" | sudo tee -a /etc/apt/sources.list.d/elastic-6.x.list
+
+- name: install beats
+  apt:
+    update_cache: yes
+    name: ['metricbeat','filebeat','packetbeat']
+    state: latest
+
+- name: setup elasticsearch host
+  lineinfile:
+    line: "  hosts: [\"{{ elastic_host }}:9200\"]"
+    regexp: '^  hosts: \["localhost:9200"\]'
+    path: "/etc/{{ item }}/{{ item }}.yml"
+  with_items:
+    - filebeat
+    - metricbeat
+    - packetbeat
+
+- name: start services
+  service:
+    name: "{{item}}"
+    state: started
+    enabled: true
+  with_items:
+    - filebeat
+    - metricbeat
+    - packetbeat

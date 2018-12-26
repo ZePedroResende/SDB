@@ -1,0 +1,135 @@
+---
+
+- name: update apt cache
+  apt: update_cache=yes
+
+- name: install required packages
+  apt: 
+    name: ['build-essential', 'tcl', 'python-simplejson']
+    state: present
+
+- name: download redis src
+  # remote_src broken in ~ 2.1
+  # https://github.com/ansible/ansible-modules-core/issues/4752
+  unarchive: 
+    src: http://download.redis.io/redis-stable.tar.gz 
+    copy: no
+    dest: /tmp
+    mode: u=rwx,g=rx,o=rx
+    owner: root
+    creates: /tmp/redis-stable
+
+- name: make redis
+  make: chdir=/tmp/redis-stable
+
+- name: test and install redis
+  make: chdir=/tmp/redis-stable target={{ item }}
+  become: yes
+  with_items:
+    - install
+
+- name: create /etc/redis, data, logs, and socket directories
+  file: path={{ item }} state=directory
+  with_items:
+    - /etc/redis
+    - /var/lib/redis
+    - /var/log/redis
+    - /var/run/redis
+
+- name: copy default redis.conf
+  # create a copy of the default redis.conf
+  copy: remote_src=True
+        src=/tmp/redis-stable/redis.conf
+        dest=/etc/redis/redis.conf
+  become: yes
+
+- name: configure systemmd
+  lineinfile: dest=/etc/redis/redis.conf 
+            regexp='^supervised no$' 
+            line='supervised systemd'
+            state=present
+
+- name: store redis data in /var/lib/redis
+  lineinfile: dest=/etc/redis/redis.conf
+            regexp='^dir ./$'
+            line='dir /var/lib/redis'
+            state=present
+
+- name: bind to redis.bind_addr
+  lineinfile: dest=/etc/redis/redis.conf
+            regexp='^bind 127\.0\.0\.1'
+            line='bind 0.0.0.0'
+            state=present
+
+- name: configure logging
+  lineinfile: dest=/etc/redis/redis.conf
+            regexp='^logfile ""$'
+            line='logfile {{ redis_logfile }}'
+            state=present
+
+- name: disable Transparent Huge Pages (THP) support
+  lineinfile: dest=/etc/rc.local
+            insertbefore='^exit 0$'
+            line='echo never > /sys/kernel/mm/transparent_hugepage/enabled'
+            state=present
+  become: yes
+
+- name: fix TCP backlog
+  lineinfile: dest=/etc/rc.local
+            insertbefore='^exit 0$'
+            line='net.core.somaxconn={{ redis_tcp_sockets }}'
+            state=present
+  become: yes
+
+- command: sysctl -w net.core.somaxconn={{ redis_tcp_sockets }}
+  become: yes
+
+- command: sysctl vm.overcommit_memory=1
+  become: yes
+
+- name: create redis-as-a-service
+  template: src=templates/redis.service.j2 
+            dest=/etc/systemd/system/redis.service
+            owner=root
+            group=root
+            mode=0644
+
+- name: create redis group
+  group: name=redis state=present
+
+- name: create redis user
+  user: name={{ redis_user }}
+        group={{ redis_group }}
+        shell=/bin/bash
+        createhome=no
+
+- name: enable unix socket support
+  lineinfile: dest=/etc/redis/redis.conf
+            regexp='^unixsocket {{ redis_socket }}$'
+            line='unixsocket {{ redis_socket }}'
+            state=present
+            insertafter=EOF
+            create=True
+
+- name: configure unix socket permissions
+  lineinfile: dest=/etc/redis/redis.conf
+            regexp='^unixsocketperm {{ redis_socket_permissions }}$'
+            line='unixsocketperm {{ redis_socket_permissions }}'
+            state=present
+            insertafter=EOF
+            create=True
+
+- name: set permissions for redis
+  file: path={{ item }} state=touch owner=redis group=redis mode=0770
+  with_items:
+    - /etc/redis
+    - /var/lib/redis
+    - /var/log/redis
+    - /var/run/redis
+  become: yes
+
+- name: start redis
+  service: 
+    name: redis 
+    state: restarted 
+    enabled: yes

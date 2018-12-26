@@ -1,0 +1,10 @@
+---
+
+- name: Create PostgreSQL database
+  become_user: postgres
+  postgresql_db:
+    name: "{{ dbname }}"
+    encoding: "{{ encoding | default('UTF-8') }}"
+    owner: "{{ owner | default('postgres') }}"
+  tags:
+    - db

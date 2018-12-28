@@ -31,3 +31,13 @@
     - filebeat
     - metricbeat
     - packetbeat
+
+- name: add dashboard
+  shell: filebeat setup -E setup.kibana.host={{ elastic_host }}:80
+
+- name: add dasshboard
+  shell: metricbeat setup -E setup.kibana.host={{ elastic_host }}:80
+
+- name: add dasshboard
+  shell: packetbeat setup -E setup.kibana.host={{ elastic_host }}:80
+

@@ -90,6 +90,9 @@
     - { role: beats,
         elastic_host: "{{ groups['elastic'][0] }}"
       }
+    - { role: kibana-templates,
+        elastic_host: "{{ groups['elastic'][0] }}"
+      }
 
 
 - hosts: app*
